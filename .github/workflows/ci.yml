@@ -36,12 +36,4 @@ jobs:
 
       - name: Python smoke test
         run: |
-          python -c "
-            import inferlib
-            logits = [1.0, 2.0, 3.0, 4.0, 5.0]
-            t = inferlib.top_k(logits, k=3, temperature=1.0)
-            assert t in range(5), f'bad token: {t}'
-            g = inferlib.greedy([1.0, 5.0, 3.0])
-            assert g == 1, f'greedy failed: {g}'
-            print('all smoke tests passed')
-          "
+          python -c "import inferlib; logits=[1.0,2.0,3.0,4.0,5.0]; t=inferlib.top_k(logits,k=3,temperature=1.0); assert t in range(5); g=inferlib.greedy([1.0,5.0,3.0]); assert g==1; print('all smoke tests passed')"
