@@ -1,0 +1,17 @@
+[package]
+name = "inferlib-core"
+version = "0.1.0"
+edition = "2021"
+description = "Fast LLM inference primitives"
+license = "MIT"
+
+[dependencies]
+rand = "0.8"
+rayon = "1.10"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "sampling"
+harness = false

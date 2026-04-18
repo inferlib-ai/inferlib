@@ -1,0 +1,17 @@
+[package]
+name = "inferlib-python"
+version = "0.1.0"
+edition = "2021"
+description = "PyO3 bindings for inferlib-core"
+
+[lib]
+name = "inferlib"
+crate-type = ["cdylib"]
+
+[dependencies]
+inferlib-core = { path = ".." }
+pyo3 = { version = "0.22", features = ["extension-module"] }
+rand = "0.8"
+
+[build-dependencies]
+pyo3-build-config = "0.22"
