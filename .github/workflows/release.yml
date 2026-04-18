@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build_wheels:
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build wheel
+        run: maturin build --release --manifest-path inferlib-python/pyproject.toml --out dist --interpreter python${{ matrix.python-version }}
+        env:
+          MATURIN_SETUP_ARGS: "--features pyo3/extension-module"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*.whl
+
+  build_sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    container: python:3.11-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: pip install build && cd inferlib-python && python -m build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: inferlib-python/dist/*.tar.gz
+
+  test:
+    name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.9', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install inferlib
+        run: pip install -e ./inferlib-python --no-build-isolation
+
+      - name: Run tests
+        run: |
+          pip install pytest
+          cargo test --manifest-path src/sampling.rs
+          python -c "import inferlib; print('import ok'); logits = [1.0, 2.0, 3.0, 4.0, 5.0]; t = inferlib.top_k(logits, k=3, temperature=1.0); print(f'top_k token: {t}')"
+
+  publish:
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+
+  github_release:
+    name: Create GitHub Release
+    needs: [publish]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/**/*.whl dist/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

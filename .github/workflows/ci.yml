@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    container: python:3.11-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pip install maturin pytest
+          cargo fetch
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path src/Cargo.toml
+
+      - name: Install inferlib
+        run: pip install -e ./inferlib-python --no-build-isolation
+
+      - name: Python smoke test
+        run: |
+          python -c "
+            import inferlib
+            logits = [1.0, 2.0, 3.0, 4.0, 5.0]
+            t = inferlib.top_k(logits, k=3, temperature=1.0)
+            assert t in range(5), f'bad token: {t}'
+            g = inferlib.greedy([1.0, 5.0, 3.0])
+            assert g == 1, f'greedy failed: {g}'
+            print('all smoke tests passed')
+          "
