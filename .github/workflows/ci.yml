@@ -10,18 +10,26 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    container: python:3.11-slim
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Rust
         run: |
-          pip install maturin pytest
-          cargo fetch
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install maturin pytest
 
       - name: Run Rust tests
-        run: cargo test --manifest-path src/Cargo.toml
+        run: cargo test
+        working-directory: .
 
       - name: Install inferlib
         run: pip install -e ./inferlib-python --no-build-isolation
