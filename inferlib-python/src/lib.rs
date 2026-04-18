@@ -1,6 +1,8 @@
 //! PyO3 bindings for inferlib-core
 
 use pyo3::prelude::*;
+use pyo3::types::PyModule;
+use rand::{Rng, SeedableRng};
 use inferlib_core::sampling as core;
 
 /// Apply repetition penalty to logits (returns new Vec).
@@ -19,32 +21,32 @@ pub fn py_repetition_penalty(
 /// Top-k sampling.
 #[pyfunction]
 #[pyo3(name = "top_k")]
-pub fn py_top_k(mut logits: Vec<f32>, k: usize, temperature: f32, seed: Option<u64>) -> u32 {
-    let mut rng = rand::rngs::StdRng::seed_from_u64(seed.unwrap_or_else(|| rand::thread_rng().gen()));
+pub fn py_top_k(mut logits: Vec<f32>, k: usize, temperature: f32, _seed: Option<u64>) -> u32 {
+    let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
     core::sample_top_k(&mut logits, k, temperature, &mut rng)
 }
 
 /// Nucleus (top-p) sampling.
 #[pyfunction]
 #[pyo3(name = "top_p")]
-pub fn py_top_p(mut logits: Vec<f32>, p: f32, temperature: f32, seed: Option<u64>) -> u32 {
-    let mut rng = rand::rngs::StdRng::seed_from_u64(seed.unwrap_or_else(|| rand::thread_rng().gen()));
+pub fn py_top_p(mut logits: Vec<f32>, p: f32, temperature: f32, _seed: Option<u64>) -> u32 {
+    let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
     core::sample_nucleus(&mut logits, p, temperature, &mut rng)
 }
 
 /// Min-p sampling.
 #[pyfunction]
 #[pyo3(name = "min_p")]
-pub fn py_min_p(mut logits: Vec<f32>, min_p: f32, temperature: f32, seed: Option<u64>) -> u32 {
-    let mut rng = rand::rngs::StdRng::seed_from_u64(seed.unwrap_or_else(|| rand::thread_rng().gen()));
+pub fn py_min_p(mut logits: Vec<f32>, min_p: f32, temperature: f32, _seed: Option<u64>) -> u32 {
+    let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
     core::sample_min_p(&mut logits, min_p, temperature, &mut rng)
 }
 
 /// Typical sampling.
 #[pyfunction]
 #[pyo3(name = "typical")]
-pub fn py_typical(mut logits: Vec<f32>, mass: f32, temperature: f32, seed: Option<u64>) -> u32 {
-    let mut rng = rand::rngs::StdRng::seed_from_u64(seed.unwrap_or_else(|| rand::thread_rng().gen()));
+pub fn py_typical(mut logits: Vec<f32>, mass: f32, temperature: f32, _seed: Option<u64>) -> u32 {
+    let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
     core::sample_typical(&mut logits, mass, temperature, &mut rng)
 }
 
@@ -56,17 +58,6 @@ pub fn py_greedy(logits: Vec<f32>) -> u32 {
 }
 
 /// Combined sampler.
-///
-/// Args:
-///     logits: Raw model output logits
-///     method: "greedy" | "top_k" | "top_p" | "min_p" | "typical"
-///     temperature: Sampling temperature (0.0 = greedy)
-///     top_p: Nucleus p value
-///     top_k: Top-k value
-///     min_p: Min-p threshold
-///     repetition_penalty: Penalty for repeated tokens
-///     prev_tokens: Previously generated tokens
-///     seed: Random seed (None = random)
 #[pyfunction]
 #[pyo3(name = "sample")]
 pub fn py_sample(
@@ -95,7 +86,7 @@ pub fn py_sample(
 
 /// Python module definition.
 #[pymodule]
-pub fn inferlib(m: &PyModule) -> PyResult<()> {
+pub fn inferlib(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_top_k, m)?)?;
     m.add_function(wrap_pyfunction!(py_top_p, m)?)?;
     m.add_function(wrap_pyfunction!(py_min_p, m)?)?;
